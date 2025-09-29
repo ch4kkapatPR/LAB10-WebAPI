@@ -1,5 +1,5 @@
 <?php
-header('Content-Type: application/json'); // Return JSON only
+header('Content-Type: application/json'); 
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -13,12 +13,12 @@ try {
     $conn = new PDO("mysql:host=$servername;dbname=$dbname;charset=utf8", $username, $password);
     $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-    // Get the path from the URL
-    $uri = $_SERVER['REQUEST_URI']; // e.g., /games.php/1
-    $parts = explode('/', trim($uri, '/')); // split by /
-    
-    // Get the last part after games.php
+    $uri = $_SERVER['REQUEST_URI'];
+    $parts = explode('/', trim($uri, '/')); 
+
     $id = null;
+    $genre = isset($_GET['genre']) ? $_GET['genre'] : null;
+
     foreach ($parts as $index => $part) {
         if (strpos($part, 'games.php') !== false) {
             if (isset($parts[$index + 1])) {
@@ -29,7 +29,6 @@ try {
     }
 
     if ($id) {
-        // Fetch game by ID
         $stmt = $conn->prepare("SELECT * FROM game WHERE GameID = :id");
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
@@ -38,11 +37,25 @@ try {
         if ($game) {
             echo json_encode($game);
         } else {
-            http_response_code(404); // optional
+            http_response_code(404);
             echo json_encode(['error' => 'Game not found']);
         }
+
+    } elseif ($genre) {
+        $stmt = $conn->prepare("SELECT * FROM game WHERE Genre LIKE :genre");
+        $searchGenre = "%$genre%";
+        $stmt->bindParam(':genre', $searchGenre, PDO::PARAM_STR);
+        $stmt->execute();
+        $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if ($games) {
+            echo json_encode($games);
+        } else {
+            http_response_code(404);
+            echo json_encode(['error' => 'No games found for this genre']);
+        }
+
     } else {
-        // No ID, return all games
         $stmt = $conn->prepare("SELECT * FROM game");
         $stmt->execute();
         $games = $stmt->fetchAll(PDO::FETCH_ASSOC);
